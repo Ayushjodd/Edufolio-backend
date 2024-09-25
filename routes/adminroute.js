@@ -1,13 +1,12 @@
 const { Router } = require("express");
-const userRouter = Router();
-const brcypt = require("brcypt");
+const adminRouter = Router();
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = "your_jwt_secret";
 const saltRounds = 10;
 const { z } = require("zod");
-const User = require("../../db");
-const { userMiddleware } = require("../middlewares/user");
-const { purchaseModel, courseModel } = require("../db");
+const User = require("../db");
+const { adminMiddleware } = require("../middlewares/admin");
 
 const UserInputValidation = z.object({
   username: z.string().min(3, "Username must be at least 3 characters long"),
@@ -17,7 +16,7 @@ const UserInputValidation = z.object({
   password: z.string().min(6, "Password must be at least 6 characters long"),
 });
 
-userRouter.post("/login", async (req, res) => {
+adminRouter.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -34,7 +33,7 @@ userRouter.post("/login", async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
-    const isPassword = await brcypt.compare(password, user.password);
+    const isPassword = await bcrypt.compare(password, user.password);
     if (!isPassword) {
       return res.status(400).json({ message: "Invalid password" });
     }
@@ -51,13 +50,13 @@ userRouter.post("/login", async (req, res) => {
   }
 });
 
-userRouter.post("/signup", async (req, res) => {
+adminRouter.post("/signup", async (req, res) => {
   try {
     const validatedData = UserInputValidation.parse(req.body);
 
     const { firstname, lastname, password, email } = validatedData;
 
-    const hashedPassword = await brcypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const newUser = new User({
       firstname,
@@ -69,35 +68,49 @@ userRouter.post("/signup", async (req, res) => {
     await newUser.save();
     res.json({ message: "Signup successful" });
   } catch (err) {
-    if (err instanceof z.ZodError) {
+    if (err) {
       return res
         .status(400)
-        .json({ message: "Validation error", errors: err.errors });
+        .json({ message: "Validation error", errors: "gadbad-hai-bidu" });
     }
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ message: "Server error", error: "gadbad-hai-bidu" });
   }
 });
 
-userRouter.get("/purchases", userMiddleware, async (req, res) => {
-  const userId = req.userId;
+adminRouter.put("/course", adminMiddleware, async (req, res) => {
+  const adminId = req.userId;
 
-  const purchases = await purchaseModel.find({
-    userId,
+  const { title, description, imageUrl, price, courseId } = req.body;
+  const course = await courseModel.updateOne(
+    {
+      _id: courseId,
+      creatorId: adminId,
+    },
+    {
+      title: title,
+      description: description,
+      imageUrl: imageUrl,
+      price: price,
+    }
+  );
+
+  res.json({
+    message: "Course updated",
+    courseId: course._id,
   });
-  let purchasedCourseIds = [];
+});
 
-  for (let i = 0; i < purchases.length; i++) {
-    purchasedCourseIds.push(purchases[i].courseId);
-  }
+adminRouter.post("/course/bulk", adminMiddleware, async (req, res) => {
+  const adminId = req.userId;
 
-  const coursesData = await courseModel.find({
-    _id: { $in: purchasedCourseIds },
+  const courses = await courseModel.find({
+    creatorId: adminId,
   });
 
   res.json({
-    purchases,
-    coursesData,
+    message: "Course updated",
+    courses,
   });
 });
 
-module.exports = { userRouter };
+module.exports = { adminRouter };
