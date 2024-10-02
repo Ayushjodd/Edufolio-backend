@@ -23,6 +23,7 @@ const courseSchema = new Schema({
   price: Number,
   imageUrl: String,
   creatorId: ObjectId,
+  isApproved: { type: Boolean, default: false },
 });
 
 const purchaseSchema = new Schema({

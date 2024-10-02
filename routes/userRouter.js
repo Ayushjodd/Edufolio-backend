@@ -1,11 +1,11 @@
 const { Router } = require("express");
 const userRouter = Router();
-const brcypt = require("brcypt");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = "your_jwt_secret";
 const saltRounds = 10;
 const { z } = require("zod");
-const User = require("../../db");
+const User = require("../db");
 const { userMiddleware } = require("../middlewares/user");
 const { purchaseModel, courseModel } = require("../db");
 
@@ -34,7 +34,7 @@ userRouter.post("/login", async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
-    const isPassword = await brcypt.compare(password, user.password);
+    const isPassword = await bcrypt.compare(password, user.password);
     if (!isPassword) {
       return res.status(400).json({ message: "Invalid password" });
     }
@@ -57,7 +57,7 @@ userRouter.post("/signup", async (req, res) => {
 
     const { firstname, lastname, password, email } = validatedData;
 
-    const hashedPassword = await brcypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const newUser = new User({
       firstname,
