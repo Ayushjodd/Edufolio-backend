@@ -1,15 +1,15 @@
 const { Router } = require("express");
-const adminRouter = Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "your_jwt_secret";
-const saltRounds = 10;
 const { z } = require("zod");
-const User = require("../db");
+const { adminModel, courseModel } = require("../db");
 const { adminMiddleware } = require("../middlewares/admin");
 
-const UserInputValidation = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters long"),
+const adminRouter = Router();
+const JWT_SECRET = "your_jwt_secret";
+const saltRounds = 10;
+
+const AdminInputValidation = z.object({
   firstname: z.string().min(1, "Firstname is required"),
   lastname: z.string().min(1, "Lastname is required"),
   email: z.string().email("Invalid email format"),
@@ -28,17 +28,19 @@ adminRouter.post("/login", async (req, res) => {
     });
     LoginValidation.parse(req.body);
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
+    const admin = await adminModel.findOne({ email });
+    if (!admin) {
+      return res.status(400).json({ message: "Admin not found" });
     }
 
-    const isPassword = await bcrypt.compare(password, user.password);
+    const isPassword = await bcrypt.compare(password, admin.password);
     if (!isPassword) {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "2h" });
+    const token = jwt.sign({ id: admin._id, role: "admin" }, JWT_SECRET, {
+      expiresIn: "2h",
+    });
     res.json({ message: "Login successful", token });
   } catch (e) {
     if (e instanceof z.ZodError) {
@@ -52,65 +54,69 @@ adminRouter.post("/login", async (req, res) => {
 
 adminRouter.post("/signup", async (req, res) => {
   try {
-    const validatedData = UserInputValidation.parse(req.body);
-
+    const validatedData = AdminInputValidation.parse(req.body);
     const { firstname, lastname, password, email } = validatedData;
 
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const newUser = new User({
+    const newAdmin = new adminModel({
       firstname,
       lastname,
       email,
       password: hashedPassword,
     });
 
-    await newUser.save();
-    res.json({ message: "Signup successful" });
+    await newAdmin.save();
+
+    const token = jwt.sign({ id: newAdmin._id, role: "admin" }, JWT_SECRET, {
+      expiresIn: "2h",
+    });
+    res.json({ message: "Signup successful", token });
   } catch (err) {
-    if (err) {
+    if (err instanceof z.ZodError) {
       return res
         .status(400)
-        .json({ message: "Validation error", errors: "gadbad-hai-bidu" });
+        .json({ message: "Validation error", errors: err.errors });
     }
-    res.status(500).json({ message: "Server error", error: "gadbad-hai-bidu" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
 adminRouter.put("/course", adminMiddleware, async (req, res) => {
   const adminId = req.userId;
-
   const { title, description, imageUrl, price, courseId } = req.body;
-  const course = await courseModel.updateOne(
-    {
-      _id: courseId,
-      creatorId: adminId,
-    },
-    {
-      title: title,
-      description: description,
-      imageUrl: imageUrl,
-      price: price,
-    }
-  );
 
-  res.json({
-    message: "Course updated",
-    courseId: course._id,
-  });
+  try {
+    const updatedCourse = await courseModel.updateOne(
+      { _id: courseId, creatorId: adminId },
+      { title, description, imageUrl, price }
+    );
+
+    if (!updatedCourse.nModified) {
+      return res
+        .status(404)
+        .json({ message: "Course not found or unauthorized" });
+    }
+
+    res.json({ message: "Course updated", courseId });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Failed to update course", error: err.message });
+  }
 });
 
-adminRouter.post("/course/bulk", adminMiddleware, async (req, res) => {
+adminRouter.get("/course/bulk", adminMiddleware, async (req, res) => {
   const adminId = req.userId;
 
-  const courses = await courseModel.find({
-    creatorId: adminId,
-  });
-
-  res.json({
-    message: "Course updated",
-    courses,
-  });
+  try {
+    const courses = await courseModel.find({ creatorId: adminId });
+    res.json({ message: "Courses fetched successfully", courses });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch courses", error: err.message });
+  }
 });
 
 module.exports = { adminRouter };

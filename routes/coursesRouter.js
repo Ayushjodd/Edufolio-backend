@@ -6,12 +6,25 @@ const { purchaseModel, courseModel } = require("../db");
 const coursesRouter = Router();
 
 coursesRouter.post("/create", userMiddleware, async (req, res) => {
-  const { title, description, price, imageUrl } = req.body;
+  const {
+    title,
+    description,
+    category,
+    level,
+    duration,
+    price,
+    validity,
+    imageUrl,
+  } = req.body;
   const creatorId = req.userId;
 
   try {
     await courseModel.create({
+      category,
+      level,
+      duration,
       title,
+      validity,
       description,
       price,
       imageUrl,
@@ -70,6 +83,29 @@ coursesRouter.get("/preview", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "An error occurred while fetching courses",
+      error: error.message,
+    });
+  }
+});
+
+coursesRouter.get("/:courseId", async (req, res) => {
+  const courseId = req.params.courseId;
+
+  try {
+    const course = await courseModel.findById(courseId);
+
+    if (!course) {
+      return res.status(404).json({
+        message: "Course not found",
+      });
+    }
+
+    res.json({
+      course,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "An error occurred while fetching the course",
       error: error.message,
     });
   }

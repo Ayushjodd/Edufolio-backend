@@ -6,8 +6,7 @@ const ObjectId = mongoose.Types.ObjectId;
 const userSchema = new Schema({
   email: { type: String, unique: true },
   password: String,
-  firstName: String,
-  lastName: String,
+  username: String,
 });
 
 const adminSchema = new Schema({
@@ -18,12 +17,16 @@ const adminSchema = new Schema({
 });
 
 const courseSchema = new Schema({
+  validity: String,
   title: String,
   description: String,
   price: Number,
   imageUrl: String,
+  level: String,
+  category: String,
+  duration: Number,
   creatorId: ObjectId,
-  isApproved: { type: Boolean, default: false },
+  isApproved: { type: Boolean, default: true }, //
 });
 
 const purchaseSchema = new Schema({

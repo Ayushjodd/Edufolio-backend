@@ -10,9 +10,7 @@ const { userMiddleware } = require("../middlewares/user");
 const { purchaseModel, courseModel } = require("../db");
 
 const UserInputValidation = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters long"),
-  firstname: z.string().min(1, "Firstname is required"),
-  lastname: z.string().min(1, "Lastname is required"),
+  username: z.string().min(1, "username is required"),
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
 });
@@ -29,7 +27,7 @@ userRouter.post("/login", async (req, res) => {
     });
     LoginValidation.parse(req.body);
 
-    const user = await User.findOne({ email });
+    const user = await User.userModel.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -39,14 +37,22 @@ userRouter.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
 
+    if (!JWT_SECRET) {
+      console.error("JWT_SECRET is not defined");
+      return res.status(500).json({ message: "Server configuration error" });
+    }
+
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "2h" });
     res.json({ message: "Login successful", token });
   } catch (e) {
+    console.error("Login error:", e);
+
     if (e instanceof z.ZodError) {
       return res
         .status(400)
         .json({ message: "Validation error", errors: e.errors });
     }
+
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -55,19 +61,23 @@ userRouter.post("/signup", async (req, res) => {
   try {
     const validatedData = UserInputValidation.parse(req.body);
 
-    const { firstname, lastname, password, email } = validatedData;
+    const { username, password, email } = validatedData;
 
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const newUser = new User({
-      firstname,
-      lastname,
+    const newUser = new User.userModel({
+      username,
       email,
       password: hashedPassword,
     });
 
     await newUser.save();
-    res.json({ message: "Signup successful" });
+
+    const token = jwt.sign({ id: newUser._id }, JWT_SECRET, {
+      expiresIn: "2h",
+    });
+
+    res.json({ message: "Signup successful", token });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return res
