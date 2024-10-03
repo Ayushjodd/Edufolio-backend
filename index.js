@@ -8,7 +8,7 @@ const mongoose = require("mongoose");
 const app = express();
 
 const corsOptions = {
-  origin: "http://localhost:5173",
+  origin: "https://edufolio-five.vercel.app/",
   credentials: true,
 };
 
