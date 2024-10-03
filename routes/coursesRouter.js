@@ -42,7 +42,7 @@ coursesRouter.post("/create", userMiddleware, async (req, res) => {
   }
 });
 
-coursesRouter.patch("/approve/:courseId", adminMiddleware, async (req, res) => {
+coursesRouter.post("/approve/:courseId", adminMiddleware, async (req, res) => {
   const courseId = req.params.courseId;
 
   try {
@@ -69,6 +69,20 @@ coursesRouter.delete("/delete/:courseId", adminMiddleware, async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "An error occurred while deleting the course",
+      error: error.message,
+    });
+  }
+});
+
+coursesRouter.get("/pending", adminMiddleware, async (req, res) => {
+  try {
+    const courses = await courseModel.find({ isApproved: false });
+    res.json({
+      courses,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "An error occurred while fetching courses",
       error: error.message,
     });
   }
@@ -111,7 +125,7 @@ coursesRouter.get("/:courseId", async (req, res) => {
   }
 });
 
-coursesRouter.get("/purchases", userMiddleware, async (req, res) => {
+coursesRouter.get("/purchase", userMiddleware, async (req, res) => {
   const userId = req.userId;
 
   try {

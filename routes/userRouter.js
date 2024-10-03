@@ -2,7 +2,7 @@ const { Router } = require("express");
 const userRouter = Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "your_jwt_secret";
+const { JWT_USER_PASSWORD } = require("../config");
 const saltRounds = 10;
 const { z } = require("zod");
 const User = require("../db");
@@ -37,12 +37,14 @@ userRouter.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    if (!JWT_SECRET) {
+    if (!JWT_USER_PASSWORD) {
       console.error("JWT_SECRET is not defined");
       return res.status(500).json({ message: "Server configuration error" });
     }
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "2h" });
+    const token = jwt.sign({ id: user._id }, JWT_USER_PASSWORD, {
+      expiresIn: "2h",
+    });
     res.json({ message: "Login successful", token });
   } catch (e) {
     console.error("Login error:", e);
@@ -73,7 +75,7 @@ userRouter.post("/signup", async (req, res) => {
 
     await newUser.save();
 
-    const token = jwt.sign({ id: newUser._id }, JWT_SECRET, {
+    const token = jwt.sign({ id: newUser._id }, JWT_USER_PASSWORD, {
       expiresIn: "2h",
     });
 

@@ -12,8 +12,7 @@ const userSchema = new Schema({
 const adminSchema = new Schema({
   email: { type: String, unique: true },
   password: String,
-  firstName: String,
-  lastName: String,
+  username: String,
 });
 
 const courseSchema = new Schema({
