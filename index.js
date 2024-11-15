@@ -7,12 +7,13 @@ const { adminRouter } = require("./routes/adminroute");
 const mongoose = require("mongoose");
 const app = express();
 
-const corsOptions = {
-  origin: "https://edufolio-five.vercel.app/",
-  credentials: true,
-};
-
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: "https://edufolio-five.vercel.app",
+    methods: "GET ,POST, PUT, DELETE",
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 app.use("/api/v1/user", userRouter);
